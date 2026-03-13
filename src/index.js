@@ -1,4 +1,5 @@
 import express from 'express';
+import { matchRouter } from './routes/matches.js';
 
 const app = express();
 const PORT = 8000;
@@ -10,6 +11,8 @@ app.use(express.json());
 app.get('/', (req, res) => {
     res.json({ message: 'Welcome to the Sports Broadcast Engine API!' });
 });
+
+app.use('/matches', matchRouter);
 
 // Start server and log the URL
 app.listen(PORT, () => {
