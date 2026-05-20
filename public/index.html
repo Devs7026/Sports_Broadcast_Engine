@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sports Broadcast Engine — Live Dashboard</title>
+  <meta name="description" content="Real-time sports broadcast dashboard for live scores, commentary, and match events powered by WebSockets." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ═══════════════════════════ HEADER ═══════════════════════════ -->
+  <header class="app-header" id="app-header">
+    <div class="header-brand">
+      <div class="header-logo">
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="14" cy="14" r="13" stroke="url(#logoGrad)" stroke-width="2"/>
+          <path d="M8 14 L12 10 L16 14 L20 10" stroke="url(#logoGrad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M8 18 L12 14 L16 18 L20 14" stroke="url(#logoGrad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <defs>
+            <linearGradient id="logoGrad" x1="0" y1="0" x2="28" y2="28" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#00d4ff"/>
+              <stop offset="100%" stop-color="#7c3aed"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <div>
+        <h1 class="header-title">Sports Broadcast Engine</h1>
+        <p class="header-subtitle">Real-Time Live Dashboard</p>
+      </div>
+    </div>
+    <div class="header-status">
+      <div class="ws-indicator" id="ws-indicator">
+        <span class="ws-dot" id="ws-dot"></span>
+        <span class="ws-label" id="ws-label">Connecting…</span>
+      </div>
+      <button class="btn btn-primary btn-sm" id="btn-new-match">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        New Match
+      </button>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════ MAIN GRID ═══════════════════════════ -->
+  <main class="app-grid" id="app-grid">
+
+    <!-- ─── LEFT: MATCHES PANEL ─── -->
+    <aside class="panel panel-matches" id="panel-matches">
+      <div class="panel-header">
+        <h2 class="panel-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+          Live Matches
+        </h2>
+        <span class="badge badge-count" id="match-count">0</span>
+      </div>
+
+      <div class="match-filters" id="match-filters">
+        <button class="filter-btn active" data-filter="all" id="filter-all">All</button>
+        <button class="filter-btn" data-filter="live" id="filter-live">🔴 Live</button>
+        <button class="filter-btn" data-filter="scheduled" id="filter-scheduled">Scheduled</button>
+        <button class="filter-btn" data-filter="finished" id="filter-finished">Finished</button>
+      </div>
+
+      <div class="match-list" id="match-list">
+        <div class="empty-state" id="matches-empty">
+          <div class="empty-icon">🏟️</div>
+          <p>No matches found</p>
+          <span>Create a match to get started</span>
+        </div>
+      </div>
+
+      <button class="btn btn-ghost btn-block" id="btn-refresh-matches">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        Refresh Matches
+      </button>
+    </aside>
+
+    <!-- ─── CENTER: LIVE FEED ─── -->
+    <section class="panel panel-feed" id="panel-feed">
+      <div class="panel-header">
+        <div class="feed-title-group">
+          <h2 class="panel-title" id="feed-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.46 2 2 0 0 1 3.6 1.29h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.9a16 16 0 0 0 6 6l.92-.92a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 16l.19.92z"/></svg>
+            Select a Match
+          </h2>
+          <p class="feed-subtitle" id="feed-subtitle">Click a match to watch the live commentary feed</p>
+        </div>
+        <div class="feed-controls">
+          <button class="icon-btn" id="btn-clear-feed" title="Clear feed">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+          </button>
+          <button class="icon-btn" id="btn-toggle-autoscroll" title="Auto-scroll" data-active="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 11 12 6 7 11"/><polyline points="17 18 12 13 7 18"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="feed-scoreboard" id="feed-scoreboard" style="display:none">
+        <div class="scoreboard-home">
+          <span class="score-team" id="score-home-team">Home</span>
+          <span class="score-value" id="score-home-val">0</span>
+        </div>
+        <div class="scoreboard-center">
+          <span class="score-vs">VS</span>
+          <span class="score-sport" id="score-sport">Sport</span>
+        </div>
+        <div class="scoreboard-away">
+          <span class="score-value" id="score-away-val">0</span>
+          <span class="score-team" id="score-away-team">Away</span>
+        </div>
+      </div>
+
+      <div class="feed-list" id="feed-list">
+        <div class="feed-placeholder" id="feed-placeholder">
+          <div class="radar-animation">
+            <div class="radar-ring"></div>
+            <div class="radar-ring"></div>
+            <div class="radar-ring"></div>
+            <div class="radar-dot"></div>
+          </div>
+          <p>Awaiting live events…</p>
+          <span>Select a match and subscribe to start receiving real-time commentary</span>
+        </div>
+      </div>
+
+      <div class="feed-footer" id="feed-footer">
+        <span class="event-count" id="event-count">0 events</span>
+        <span class="subscribed-label" id="subscribed-label" style="display:none">
+          <span class="pulse-dot"></span> Subscribed
+        </span>
+      </div>
+    </section>
+
+    <!-- ─── RIGHT: ADMIN PANEL ─── -->
+    <aside class="panel panel-admin" id="panel-admin">
+      <div class="panel-header">
+        <h2 class="panel-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          Admin Controls
+        </h2>
+      </div>
+
+      <!-- Post Commentary Form -->
+      <div class="admin-section" id="section-commentary">
+        <div class="admin-section-header">
+          <span class="admin-section-title">Post Commentary</span>
+          <span class="admin-section-tag" id="commentary-match-tag">No match selected</span>
+        </div>
+        <form class="admin-form" id="form-commentary" novalidate>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="inp-minute">Minute</label>
+              <input type="number" id="inp-minute" class="form-input" placeholder="45" min="0" />
+            </div>
+            <div class="form-group">
+              <label for="inp-period">Period</label>
+              <input type="text" id="inp-period" class="form-input" placeholder="1H" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="inp-event-type">Event Type</label>
+              <select id="inp-event-type" class="form-input form-select">
+                <option value="">— Select —</option>
+                <option value="GOAL">⚽ Goal</option>
+                <option value="YELLOW_CARD">🟨 Yellow Card</option>
+                <option value="RED_CARD">🟥 Red Card</option>
+                <option value="SUBSTITUTION">🔄 Substitution</option>
+                <option value="FOUL">⚠️ Foul</option>
+                <option value="OFFSIDE">🚩 Offside</option>
+                <option value="CORNER">📐 Corner</option>
+                <option value="PENALTY">🎯 Penalty</option>
+                <option value="KICKOFF">🏁 Kick-off</option>
+                <option value="HALFTIME">⏸ Half-time</option>
+                <option value="FULLTIME">🏁 Full-time</option>
+                <option value="VAR">📺 VAR Review</option>
+                <option value="COMMENT">💬 Comment</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="inp-sequence">Sequence</label>
+              <input type="number" id="inp-sequence" class="form-input" placeholder="1" min="0" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="inp-actor">Actor (Player)</label>
+            <input type="text" id="inp-actor" class="form-input" placeholder="Alex Morgan" />
+          </div>
+          <div class="form-group">
+            <label for="inp-team">Team</label>
+            <input type="text" id="inp-team" class="form-input" placeholder="Team Name" />
+          </div>
+          <div class="form-group">
+            <label for="inp-message">Message <span class="required">*</span></label>
+            <textarea id="inp-message" class="form-input form-textarea" placeholder="Describe the event…" rows="3" required></textarea>
+          </div>
+          <div class="form-group">
+            <label for="inp-tags">Tags <span class="form-hint">(comma-separated)</span></label>
+            <input type="text" id="inp-tags" class="form-input" placeholder="highlight, key-moment" />
+          </div>
+          <button type="submit" class="btn btn-primary btn-block" id="btn-post-commentary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            Broadcast Event
+          </button>
+        </form>
+      </div>
+
+      <!-- Quick Stats -->
+      <div class="admin-section" id="section-stats">
+        <div class="admin-section-header">
+          <span class="admin-section-title">Session Stats</span>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <span class="stat-value" id="stat-total-matches">—</span>
+            <span class="stat-label">Total Matches</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-value" id="stat-live-count">—</span>
+            <span class="stat-label">Live Now</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-value" id="stat-events-sent">0</span>
+            <span class="stat-label">Events Sent</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-value" id="stat-ws-latency">—</span>
+            <span class="stat-label">WS Latency</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+  </main>
+
+  <!-- ═══════════════════════════ CREATE MATCH MODAL ═══════════════════════════ -->
+  <div class="modal-overlay" id="modal-overlay" style="display:none" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal" id="modal-create-match">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-title">Create New Match</h3>
+        <button class="modal-close" id="btn-modal-close" aria-label="Close modal">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <form class="admin-form" id="form-create-match" novalidate>
+        <div class="form-group">
+          <label for="inp-sport">Sport <span class="required">*</span></label>
+          <select id="inp-sport" class="form-input form-select" required>
+            <option value="">— Select Sport —</option>
+            <option value="Football">⚽ Football</option>
+            <option value="Basketball">🏀 Basketball</option>
+            <option value="Tennis">🎾 Tennis</option>
+            <option value="Cricket">🏏 Cricket</option>
+            <option value="Baseball">⚾ Baseball</option>
+            <option value="Rugby">🏉 Rugby</option>
+            <option value="Hockey">🏒 Hockey</option>
+            <option value="Volleyball">🏐 Volleyball</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="inp-home-team">Home Team <span class="required">*</span></label>
+            <input type="text" id="inp-home-team" class="form-input" placeholder="e.g. Arsenal" required />
+          </div>
+          <div class="form-group">
+            <label for="inp-away-team">Away Team <span class="required">*</span></label>
+            <input type="text" id="inp-away-team" class="form-input" placeholder="e.g. Chelsea" required />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="inp-start-time">Start Time <span class="required">*</span></label>
+            <input type="datetime-local" id="inp-start-time" class="form-input" required />
+          </div>
+          <div class="form-group">
+            <label for="inp-end-time">End Time <span class="required">*</span></label>
+            <input type="datetime-local" id="inp-end-time" class="form-input" required />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="inp-home-score">Home Score</label>
+            <input type="number" id="inp-home-score" class="form-input" placeholder="0" min="0" value="0" />
+          </div>
+          <div class="form-group">
+            <label for="inp-away-score">Away Score</label>
+            <input type="number" id="inp-away-score" class="form-input" placeholder="0" min="0" value="0" />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" id="btn-cancel-match">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-match">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Create Match
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════ TOAST CONTAINER ═══════════════════════════ -->
+  <div class="toast-container" id="toast-container" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

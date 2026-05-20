@@ -1,9 +1,14 @@
 import express from 'express';
 import http from 'http';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { matchRouter } from './routes/matches.js';
 import { commentaryRouter } from './routes/commentary.js';
 import { attachWebSocketServer } from './ws/server.js';
 import { securityMiddleware } from './arcjet.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = Number(process.env.PORT || 8000);
@@ -14,10 +19,8 @@ const server = http.createServer(app);
 // JSON middleware
 app.use(express.json());
 
-// Root GET route
-app.get('/', (req, res) => {
-    res.json({ message: 'Welcome to the Sports Broadcast Engine API!' });
-});
+// Serve the frontend dashboard from /public
+app.use(express.static(path.join(__dirname, '../public')));
 
 app.use(securityMiddleware());
 
